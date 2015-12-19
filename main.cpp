@@ -25,14 +25,6 @@ struct Card {
     const static int NO_VALUES = 3;
     const static int NO_CARDS = 81;
     
-    //const static array<string,NO_PROPERTIES> PROPERTY_NAMES = {"Number", "Colour", "Shading", "Shape"};
-    /*static array<array<string,NO_VALUES>,NO_PROPERTIES> VALUE_NAME = { "1" ,     "2",             "3",
-                                                                       "Red",    "Green",         "Purple",
-                                                                       "Solid",  "Empty",         "Striped",
-                                                                       "Wiggly", "Quadrilateral", "Rounded"};
-    static string getPropertyName(int index) const {
-        return PROPERTY_NAMES.at(index);
-    }*/
     int getValue(int property) const {
         if(!(0 <= property && property < NO_PROPERTIES)) {
             throw out_of_range("Trying to access inexistent member.");
@@ -43,9 +35,6 @@ struct Card {
         }
         return rtn %NO_VALUES;
     }
-    /*string getValueName(int index) const {
-        return VALUE_NAME.at(index).at(getValue(index));
-    }*/
     bool operator==(const Card& rhs) const { return value == rhs.value; }
     int value;
 };
@@ -142,12 +131,24 @@ void removeSetFromTable(vector<Card>& table, const Set &set, Deck::iterator next
     }
 }
 
+void removeSetFromTableWithoutReplacement(vector<Card>& table, const Set &set) {
+    auto it_end = table.end();
+    for(const auto& card : set) {
+        auto card_to_remove = find(table.begin(),it_end,card);
+        if(card_to_remove == it_end) throw invalid_argument("The card on the set, is not on the table");
+        std::swap(*card_to_remove,*(--it_end));
+    }
+    table.resize(table.size()-set.size());
+}
+
 static int no_unique = 0;
 static int unique_part_set = 0;
 static int unique_not_part_set = 0;
 static int no_tables = 0;
 static int no_set = 0;
 static int max_table_size = 0;
+static int table_size_15 = 0;
+static int table_size_18 = 0;
 
 void game() {
  Deck deck;
@@ -171,10 +172,20 @@ void game() {
                 else                               {unique_not_part_set++; }
                 count ++;
             }
-            removeSetFromTable(table,sets[index],it);    
+            if(table.size() == INITIAL_NO_CARDS_TABLE) {
+                removeSetFromTable(table,sets[index],it);
+            }
+            else {
+                removeSetFromTableWithoutReplacement(table,sets[index]);
+            }
         }
         else if(!sets.empty()) {
-            removeSetFromTable(table,sets[0],it);
+            if(table.size() == INITIAL_NO_CARDS_TABLE) {
+                removeSetFromTable(table,sets[0],it);
+            }
+            else {
+                removeSetFromTableWithoutReplacement(table,sets[0]);
+            }
         }
         else  {
             for(int i = 0; i < NO_CARDS_IN_SET; i++) {
@@ -183,11 +194,13 @@ void game() {
             no_set++;
         }
         max_table_size = max(int(table.size()),max_table_size);
+        if(table.size() == 15) { table_size_15++;}
+        if(table.size() == 18) { table_size_18++;}
  }
 }
 
 int main() {
-    const int NO_GAMES = 10000;
+    const int NO_GAMES = 100000;
     try{
         for(int i = 0; i < NO_GAMES; i++) {
             game();
@@ -202,6 +215,8 @@ int main() {
     cout << "Probability of unique card being part of a set: " << unique_part_set/double(unique_part_set+unique_not_part_set) << "\n";
     cout << "Probability of unique appearing: " << no_unique/double(no_tables) << "\n";
     cout << "Probability of no set: " << no_set/double(no_tables) << "\n";
+    cout << "Probability of 15 cards: " << table_size_15/double(no_tables) << "\n";
+    cout << "Probability of 18 cards: " << table_size_18/double(no_tables) << "\n";
     cout << "Max table size: " << max_table_size << "\n";
     return 0;
 }
